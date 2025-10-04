@@ -18,6 +18,7 @@ interface FoodListing {
   available_until: string;
   status: string;
   created_at: string;
+  image_url?: string;
 }
 
 const ProviderDashboard = () => {

@@ -38,6 +38,20 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
     pickup_instructions: "",
     available_until: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,10 +60,39 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    let imageUrl = "";
+
+    // Upload image if selected
+    if (imageFile) {
+      const fileExt = imageFile.name.split(".").pop();
+      const filePath = `${session.user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("food-images")
+        .upload(filePath, imageFile);
+
+      if (uploadError) {
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("food-images")
+        .getPublicUrl(filePath);
+
+      imageUrl = publicUrl;
+    }
+
     const { error } = await supabase.from("food_listings").insert({
       ...formData,
       provider_id: session.user.id,
       status: "available",
+      image_url: imageUrl || null,
     });
 
     if (error) {
@@ -74,6 +117,8 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
         pickup_instructions: "",
         available_until: "",
       });
+      setImageFile(null);
+      setImagePreview("");
     }
     setLoading(false);
   };
@@ -108,6 +153,26 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="image">Food Photo (Optional)</Label>
+            <Input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="cursor-pointer"
+            />
+            {imagePreview && (
+              <div className="mt-2">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

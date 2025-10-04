@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Package } from "lucide-react";
+import { Calendar, MapPin, Package, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -16,6 +16,7 @@ interface FoodListingCardProps {
     pickup_location: string;
     available_until: string;
     status: string;
+    image_url?: string;
   };
   onUpdate: () => void;
   isProvider: boolean;
@@ -85,6 +86,19 @@ const FoodListingCard = ({ listing, onUpdate, isProvider }: FoodListingCardProps
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+      {listing.image_url ? (
+        <div className="aspect-video w-full overflow-hidden bg-muted">
+          <img
+            src={listing.image_url}
+            alt={listing.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="aspect-video w-full bg-muted flex items-center justify-center">
+          <ImageIcon className="h-12 w-12 text-muted-foreground" />
+        </div>
+      )}
       <CardHeader>
         <div className="flex justify-between items-start mb-2">
           <Badge className={getStatusColor(listing.status)}>{listing.status}</Badge>

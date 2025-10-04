@@ -19,6 +19,7 @@ interface FoodListing {
   latitude: number;
   longitude: number;
   provider_id: string;
+  image_url?: string;
 }
 
 const ConsumerDashboard = () => {
