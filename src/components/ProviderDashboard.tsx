@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import CreateListingDialog from "./CreateListingDialog";
 import FoodListingCard from "./FoodListingCard";
+import ProviderProfile from "./ProviderProfile";
 
 interface FoodListing {
   id: string;
@@ -76,9 +77,11 @@ const ProviderDashboard = () => {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+        <ProviderProfile />
+
+        <div className="flex justify-between items-center mb-8 mt-12">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Your Food Listings</h1>
+            <h2 className="text-3xl font-bold mb-2">Your Food Listings</h2>
             <p className="text-muted-foreground">Manage your surplus food donations</p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">

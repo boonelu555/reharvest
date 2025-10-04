@@ -6,6 +6,7 @@ import { Leaf, LogOut, Map, List } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import FoodListingCard from "./FoodListingCard";
+import ConsumerProfile from "./ConsumerProfile";
 
 interface FoodListing {
   id: string;
@@ -74,8 +75,10 @@ const ConsumerDashboard = () => {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Available Food Near You</h1>
+        <ConsumerProfile />
+
+        <div className="mb-8 mt-12">
+          <h2 className="text-3xl font-bold mb-2">Available Food Near You</h2>
           <p className="text-muted-foreground">Find and claim fresh food from local businesses</p>
         </div>
 
