@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Leaf } from "lucide-react";
+import { Leaf, Store, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -18,9 +17,13 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"provider" | "consumer">(
-    (searchParams.get("role") as "provider" | "consumer") || "consumer"
+  const [organizationName, setOrganizationName] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState<"provider" | "consumer" | null>(
+    (searchParams.get("role") as "provider" | "consumer") || null
   );
+  const [signupStep, setSignupStep] = useState<"role" | "details">("role");
   const defaultTab = searchParams.get("signup") === "true" ? "signup" : "signin";
 
   useEffect(() => {
@@ -35,14 +38,24 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
+    const metadata = role === "provider" 
+      ? {
+          full_name: organizationName,
+          role: role,
+          business_name: organizationName,
+          business_address: businessAddress,
+          phone: phone,
+        }
+      : {
+          full_name: fullName,
+          role: role,
+        };
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          full_name: fullName,
-          role: role,
-        },
+        data: metadata,
         emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
@@ -131,62 +144,152 @@ const Auth = () => {
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullname">Full Name</Label>
-                  <Input
-                    id="fullname"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>I am a...</Label>
-                  <RadioGroup value={role} onValueChange={(value) => setRole(value as "provider" | "consumer")}>
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="consumer" id="consumer" />
-                      <Label htmlFor="consumer" className="flex-1 cursor-pointer">
-                        <div className="font-medium">Community Member</div>
-                        <div className="text-sm text-muted-foreground">Looking for available food</div>
-                      </Label>
+              {signupStep === "role" ? (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold mb-2">Choose Your Role</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Select how you'll be using reharvest
+                    </p>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole("consumer");
+                      setSignupStep("details");
+                    }}
+                    className="w-full p-6 border-2 rounded-xl hover:border-primary hover:bg-secondary/50 transition-all text-left group"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-secondary rounded-lg group-hover:bg-primary/10">
+                        <Users className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-lg mb-1">Community Member</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Find and claim available food from local businesses near you
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value="provider" id="provider" />
-                      <Label htmlFor="provider" className="flex-1 cursor-pointer">
-                        <div className="font-medium">Food Business</div>
-                        <div className="text-sm text-muted-foreground">Sharing surplus food</div>
-                      </Label>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole("provider");
+                      setSignupStep("details");
+                    }}
+                    className="w-full p-6 border-2 rounded-xl hover:border-primary hover:bg-secondary/50 transition-all text-left group"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-secondary rounded-lg group-hover:bg-primary/10">
+                        <Store className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-lg mb-1">Food Business</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Share your surplus food with the community and reduce waste
+                        </p>
+                      </div>
                     </div>
-                  </RadioGroup>
+                  </button>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : "Create Account"}
-                </Button>
-              </form>
+              ) : (
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setSignupStep("role");
+                      setRole(null);
+                    }}
+                    className="mb-2"
+                  >
+                    ← Back to role selection
+                  </Button>
+
+                  {role === "consumer" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="fullname">Full Name</Label>
+                        <Input
+                          id="fullname"
+                          type="text"
+                          placeholder="John Doe"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="organizationname">Business/Organization Name</Label>
+                        <Input
+                          id="organizationname"
+                          type="text"
+                          placeholder="e.g., Green Grocer, Main St Bakery"
+                          value={organizationName}
+                          onChange={(e) => setOrganizationName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="businessaddress">Business Address</Label>
+                        <Input
+                          id="businessaddress"
+                          type="text"
+                          placeholder="123 Main St, Vancouver, BC"
+                          value={businessAddress}
+                          onChange={(e) => setBusinessAddress(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Contact Phone</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="(604) 555-0123"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      placeholder="At least 6 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Creating account..." : "Create Account"}
+                  </Button>
+                </form>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
