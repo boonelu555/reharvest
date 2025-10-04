@@ -19,6 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface CreateListingDialogProps {
   open: boolean;
@@ -40,12 +45,26 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedTime, setSelectedTime] = useState<string>("");
 
-  // Get minimum datetime (now + 1 hour)
-  const getMinDateTime = () => {
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
-    return now.toISOString().slice(0, 16);
+  // Generate time options (every 30 minutes)
+  const timeOptions = Array.from({ length: 48 }, (_, i) => {
+    const hours = Math.floor(i / 2);
+    const minutes = i % 2 === 0 ? "00" : "30";
+    const period = hours < 12 ? "AM" : "PM";
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return {
+      value: `${String(hours).padStart(2, "0")}:${minutes}`,
+      label: `${displayHours}:${minutes} ${period}`,
+    };
+  });
+
+  // Get minimum date (today)
+  const getMinDate = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,10 +81,25 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedDate || !selectedTime) {
+      toast({
+        title: "Error",
+        description: "Please select both date and time",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+
+    // Combine date and time
+    const [hours, minutes] = selectedTime.split(":");
+    const availableUntil = new Date(selectedDate);
+    availableUntil.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
     let imageUrl = "";
 
@@ -97,6 +131,7 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
 
     const { error } = await supabase.from("food_listings").insert({
       ...formData,
+      available_until: availableUntil.toISOString(),
       provider_id: session.user.id,
       status: "available",
       image_url: imageUrl || null,
@@ -126,6 +161,8 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
       });
       setImageFile(null);
       setImagePreview("");
+      setSelectedDate(undefined);
+      setSelectedTime("");
     }
     setLoading(false);
   };
@@ -237,15 +274,53 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="available_until">Available Until *</Label>
-            <Input
-              id="available_until"
-              type="datetime-local"
-              min={getMinDateTime()}
-              value={formData.available_until}
-              onChange={(e) => setFormData({ ...formData, available_until: e.target.value })}
-              required
-            />
+            <Label>Available Until *</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="date"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      disabled={(date) => date < getMinDate()}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="time">Time</Label>
+                <Select value={selectedTime} onValueChange={setSelectedTime}>
+                  <SelectTrigger id="time">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">
               Food will be available until this date and time
             </p>
