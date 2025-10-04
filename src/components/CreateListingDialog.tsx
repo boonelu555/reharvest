@@ -41,6 +41,13 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
+  // Get minimum datetime (now + 1 hour)
+  const getMinDateTime = () => {
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    return now.toISOString().slice(0, 16);
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -234,10 +241,14 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
             <Input
               id="available_until"
               type="datetime-local"
+              min={getMinDateTime()}
               value={formData.available_until}
               onChange={(e) => setFormData({ ...formData, available_until: e.target.value })}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Food will be available until this date and time
+            </p>
           </div>
 
           <div className="flex gap-3 pt-4">
