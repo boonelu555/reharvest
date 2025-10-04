@@ -47,8 +47,22 @@ export type Database = {
             foreignKeyName: "claims_consumer_id_fkey"
             columns: ["consumer_id"]
             isOneToOne: false
+            referencedRelation: "consumer_stats"
+            referencedColumns: ["consumer_id"]
+          },
+          {
+            foreignKeyName: "claims_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "provider_stats"
+            referencedColumns: ["provider_id"]
           },
           {
             foreignKeyName: "claims_listing_id_fkey"
@@ -119,8 +133,22 @@ export type Database = {
             foreignKeyName: "food_listings_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
+            referencedRelation: "consumer_stats"
+            referencedColumns: ["consumer_id"]
+          },
+          {
+            foreignKeyName: "food_listings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_listings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_stats"
+            referencedColumns: ["provider_id"]
           },
         ]
       }
@@ -168,7 +196,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      consumer_stats: {
+        Row: {
+          consumer_id: string | null
+          meals_received: number | null
+          pending_pickups: number | null
+          total_claims: number | null
+        }
+        Relationships: []
+      }
+      provider_stats: {
+        Row: {
+          active_listings: number | null
+          completed_donations: number | null
+          provider_id: string | null
+          total_claims: number | null
+          total_listings: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
