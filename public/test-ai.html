@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Classification Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .status { 
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #preview { max-width: 100%; margin: 20px 0; }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 AI Classification Test Page</h1>
+        <p>This page tests if TensorFlow.js and MobileNet work in your browser.</p>
+        
+        <div id="status"></div>
+        
+        <h2>Step 1: Test TensorFlow.js</h2>
+        <button onclick="testTensorFlow()">Test TensorFlow</button>
+        
+        <h2>Step 2: Upload & Classify Image</h2>
+        <input type="file" id="imageInput" accept="image/*" onchange="handleImage(event)">
+        <br><br>
+        <img id="preview" style="display:none;">
+        <br>
+        <button id="classifyBtn" onclick="classifyImage()" disabled>Classify Image</button>
+        
+        <h2>Console Log:</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1"></script>
+    
+    <script>
+        let model = null;
+        let currentImage = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logDiv.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        async function testTensorFlow() {
+            try {
+                log('Testing TensorFlow.js...');
+                showStatus('Testing TensorFlow.js...', 'info');
+                
+                await tf.ready();
+                const backend = tf.getBackend();
+                
+                log(`✅ TensorFlow.js is ready!`, 'success');
+                log(`Backend: ${backend}`, 'success');
+                log(`TF Version: ${tf.version.tfjs}`, 'success');
+                
+                showStatus(`✅ TensorFlow.js works! Backend: ${backend}`, 'success');
+                
+                // Try loading MobileNet
+                log('Loading MobileNet model...');
+                showStatus('Loading MobileNet model...', 'info');
+                
+                model = await mobilenet.load();
+                
+                log('✅ MobileNet loaded successfully!', 'success');
+                showStatus('✅ MobileNet loaded! Ready to classify images.', 'success');
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function handleImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            log(`Image selected: ${file.name} (${file.type}, ${(file.size/1024).toFixed(2)} KB)`);
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.getElementById('preview');
+                img.src = e.target.result;
+                img.style.display = 'block';
+                
+                img.onload = () => {
+                    currentImage = img;
+                    document.getElementById('classifyBtn').disabled = false;
+                    log(`✅ Image loaded: ${img.width}x${img.height}`, 'success');
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        async function classifyImage() {
+            if (!currentImage) {
+                showStatus('❌ No image loaded', 'error');
+                return;
+            }
+            
+            if (!model) {
+                log('Model not loaded, loading now...');
+                await testTensorFlow();
+            }
+            
+            if (!model) {
+                showStatus('❌ Model failed to load', 'error');
+                return;
+            }
+            
+            try {
+                log('Classifying image...');
+                showStatus('Classifying image...', 'info');
+                
+                const predictions = await model.classify(currentImage);
+                
+                log('✅ Classification complete!', 'success');
+                log('Top 3 predictions:');
+                predictions.forEach((pred, i) => {
+                    log(`  ${i+1}. ${pred.className} (${(pred.probability * 100).toFixed(2)}%)`);
+                });
+                
+                showStatus(`✅ Top prediction: ${predictions[0].className} (${(predictions[0].probability * 100).toFixed(2)}%)`, 'success');
+                
+            } catch (error) {
+                log(`❌ Classification error: ${error.message}`, 'error');
+                showStatus(`❌ Classification failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-test on load
+        log('Page loaded. Click "Test TensorFlow" to begin.');
+    </script>
+</body>
+</html>

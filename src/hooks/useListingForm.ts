@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { foodClassifier } from "@/services/foodClassifier";
 
 export interface ListingFormData {
   title: string;
@@ -28,6 +29,7 @@ export const useListingForm = (onSuccess: () => void, onOpenChange: (open: boole
   const [imagePreview, setImagePreview] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [isClassifying, setIsClassifying] = useState(false);
 
   const resetForm = () => {
     setFormData({
@@ -54,6 +56,73 @@ export const useListingForm = (onSuccess: () => void, onOpenChange: (open: boole
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const classifyImage = async () => {
+    if (!imageFile) {
+      toast({
+        title: "No image",
+        description: "Please upload an image first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('🚀 Starting AI classification process...');
+    setIsClassifying(true);
+
+    try {
+      console.log('Step 1: Loading model...');
+      // Load the model if not already loaded
+      await foodClassifier.loadModel();
+      console.log('Step 1: ✅ Model loaded');
+
+      console.log('Step 2: Creating image element...');
+      // Create image element for classification
+      const imgElement = await foodClassifier.createImageElement(imageFile);
+      console.log('Step 2: ✅ Image element created');
+
+      console.log('Step 3: Classifying image...');
+      // Classify the image
+      const result = await foodClassifier.classifyImage(imgElement);
+      console.log('Step 3: ✅ Classification complete');
+
+      // Update form data with AI predictions
+      setFormData({
+        ...formData,
+        title: result.title,
+        description: result.description,
+        category: result.category,
+      });
+
+      toast({
+        title: "AI Classification Complete!",
+        description: `Detected: ${result.title} with ${Math.round(result.confidence * 100)}% confidence`,
+      });
+      
+      console.log('🎉 Classification successful!');
+    } catch (error) {
+      console.error('❌ Classification error:', error);
+      
+      let errorMessage = "Could not analyze the image. Please fill in details manually.";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+        });
+      }
+      
+      toast({
+        title: "Classification Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsClassifying(false);
+      console.log('Classification process ended');
     }
   };
 
@@ -145,5 +214,7 @@ export const useListingForm = (onSuccess: () => void, onOpenChange: (open: boole
     setSelectedTime,
     handleImageChange,
     handleSubmit,
+    classifyImage,
+    isClassifying,
   };
 };

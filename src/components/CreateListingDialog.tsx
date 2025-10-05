@@ -30,6 +30,8 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
     setSelectedTime,
     handleImageChange,
     handleSubmit,
+    classifyImage,
+    isClassifying,
   } = useListingForm(onSuccess, onOpenChange);
 
   return (
@@ -49,6 +51,8 @@ const CreateListingDialog = ({ open, onOpenChange, onSuccess }: CreateListingDia
             onTitleChange={(value) => setFormData({ ...formData, title: value })}
             onDescriptionChange={(value) => setFormData({ ...formData, description: value })}
             onImageChange={handleImageChange}
+            onClassifyImage={classifyImage}
+            isClassifying={isClassifying}
           />
 
           <ListingDetails
