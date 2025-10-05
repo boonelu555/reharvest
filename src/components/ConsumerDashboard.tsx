@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Leaf, LogOut, Map, List } from "lucide-react";
+import { Leaf, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import FoodListingCard from "./FoodListingCard";
 import ConsumerProfile from "./ConsumerProfile";
+import FoodMapView from "./FoodMapView";
+import ClaimConfirmationDialog from "./ClaimConfirmationDialog";
 
 interface FoodListing {
   id: string;
@@ -17,8 +17,8 @@ interface FoodListing {
   pickup_location: string;
   available_until: string;
   status: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   provider_id: string;
   image_url?: string;
 }
@@ -28,6 +28,9 @@ const ConsumerDashboard = () => {
   const { toast } = useToast();
   const [listings, setListings] = useState<FoodListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedListing, setSelectedListing] = useState<FoodListing | null>(null);
+  const [showClaimDialog, setShowClaimDialog] = useState(false);
+  const [isClaimLoading, setIsClaimLoading] = useState(false);
 
   useEffect(() => {
     fetchListings();
@@ -58,6 +61,68 @@ const ConsumerDashboard = () => {
     navigate("/");
   };
 
+  const handleClaimFromMap = (listing: FoodListing) => {
+    setSelectedListing(listing);
+    setShowClaimDialog(true);
+  };
+
+  const handleConfirmClaim = async () => {
+    if (!selectedListing) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    setIsClaimLoading(true);
+
+    try {
+      const currentQuantity = parseInt(selectedListing.quantity) || 1;
+      const newQuantity = Math.max(0, currentQuantity - 1);
+
+      const { error: claimError } = await supabase.from("claims").insert({
+        listing_id: selectedListing.id,
+        consumer_id: session.user.id,
+        status: "pending",
+      });
+
+      if (claimError) throw claimError;
+
+      const updateData: any = {
+        quantity: newQuantity.toString(),
+      };
+
+      if (newQuantity === 0) {
+        updateData.status = "claimed";
+      }
+
+      const { error: updateError } = await supabase
+        .from("food_listings")
+        .update(updateData)
+        .eq("id", selectedListing.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success!",
+        description: "Food claimed! Check your email for pickup details.",
+      });
+      
+      setShowClaimDialog(false);
+      setSelectedListing(null);
+      fetchListings();
+    } catch (error: any) {
+      console.error("Claim error:", error);
+      toast({
+        title: "Error",
+        description: error.message?.includes("duplicate")
+          ? "You've already claimed this item"
+          : "Failed to claim listing",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClaimLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
       <nav className="border-b border-border bg-card/50 backdrop-blur">
@@ -82,53 +147,23 @@ const ConsumerDashboard = () => {
           <p className="text-muted-foreground">Find and claim fresh food from local businesses</p>
         </div>
 
-        <Tabs defaultValue="list" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="list">
-              <List className="h-4 w-4 mr-2" />
-              List View
-            </TabsTrigger>
-            <TabsTrigger value="map">
-              <Map className="h-4 w-4 mr-2" />
-              Map View
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="list" className="mt-6">
-            {loading ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Loading available food...</p>
-              </div>
-            ) : listings.length === 0 ? (
-              <div className="text-center py-12 bg-card rounded-2xl border border-border">
-                <h3 className="text-xl font-semibold mb-2">No food available right now</h3>
-                <p className="text-muted-foreground">Check back soon for new listings</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {listings.map((listing) => (
-                  <FoodListingCard
-                    key={listing.id}
-                    listing={listing}
-                    onUpdate={fetchListings}
-                    isProvider={false}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="map" className="mt-6">
-            <div className="bg-card rounded-2xl border border-border p-12 text-center">
-              <Map className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Map View Coming Soon</h3>
-              <p className="text-muted-foreground">
-                Interactive map with food locations will be available soon
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading available food...</p>
+          </div>
+        ) : (
+          <FoodMapView listings={listings} onClaimClick={handleClaimFromMap} />
+        )}
       </div>
+
+      {/* Claim Confirmation Dialog for Map View */}
+      <ClaimConfirmationDialog
+        open={showClaimDialog}
+        onOpenChange={setShowClaimDialog}
+        onConfirm={handleConfirmClaim}
+        listing={selectedListing}
+        isLoading={isClaimLoading}
+      />
     </div>
   );
 };
