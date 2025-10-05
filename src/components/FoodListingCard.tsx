@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,7 @@ import { Calendar, MapPin, Package, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import ClaimConfirmationDialog from "./ClaimConfirmationDialog";
 
 interface FoodListingCardProps {
   listing: {
@@ -24,31 +26,72 @@ interface FoodListingCardProps {
 
 const FoodListingCard = ({ listing, onUpdate, isProvider }: FoodListingCardProps) => {
   const { toast } = useToast();
+  const [showClaimDialog, setShowClaimDialog] = useState(false);
+  const [isClaimLoading, setIsClaimLoading] = useState(false);
 
-  const handleClaim = async () => {
+  const handleClaimClick = () => {
+    setShowClaimDialog(true);
+  };
+
+  const handleConfirmClaim = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const { error } = await supabase.from("claims").insert({
-      listing_id: listing.id,
-      consumer_id: session.user.id,
-      status: "pending",
-    });
+    setIsClaimLoading(true);
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message.includes("duplicate")
-          ? "You've already claimed this item"
-          : "Failed to claim listing",
-        variant: "destructive",
+    try {
+      // Parse current quantity
+      const currentQuantity = parseInt(listing.quantity) || 1;
+      const newQuantity = Math.max(0, currentQuantity - 1);
+
+      // 1. Insert claim
+      const { error: claimError } = await supabase.from("claims").insert({
+        listing_id: listing.id,
+        consumer_id: session.user.id,
+        status: "pending",
       });
-    } else {
+
+      if (claimError) {
+        throw claimError;
+      }
+
+      // 2. Update quantity and status if needed
+      const updateData: any = {
+        quantity: newQuantity.toString(),
+      };
+
+      // If quantity reaches 0, mark as claimed
+      if (newQuantity === 0) {
+        updateData.status = "claimed";
+      }
+
+      const { error: updateError } = await supabase
+        .from("food_listings")
+        .update(updateData)
+        .eq("id", listing.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
       toast({
         title: "Success!",
         description: "Food claimed! Check your email for pickup details.",
       });
+      
+      setShowClaimDialog(false);
       onUpdate();
+    } catch (error: any) {
+      console.error("Claim error:", error);
+      toast({
+        title: "Error",
+        description: error.message?.includes("duplicate")
+          ? "You've already claimed this item"
+          : "Failed to claim listing",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClaimLoading(false);
     }
   };
 
@@ -124,7 +167,7 @@ const FoodListingCard = ({ listing, onUpdate, isProvider }: FoodListingCardProps
         </div>
 
         {!isProvider && listing.status === "available" && (
-          <Button onClick={handleClaim} className="w-full mt-4">
+          <Button onClick={handleClaimClick} className="w-full mt-4">
             Claim This Food
           </Button>
         )}
@@ -137,6 +180,15 @@ const FoodListingCard = ({ listing, onUpdate, isProvider }: FoodListingCardProps
           </div>
         )}
       </CardContent>
+
+      {/* Claim Confirmation Dialog */}
+      <ClaimConfirmationDialog
+        open={showClaimDialog}
+        onOpenChange={setShowClaimDialog}
+        onConfirm={handleConfirmClaim}
+        listing={listing}
+        isLoading={isClaimLoading}
+      />
     </Card>
   );
 };

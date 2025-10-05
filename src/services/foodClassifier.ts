@@ -143,14 +143,56 @@ class FoodClassifier {
   }
 
   private generateDescription(predictions: any[]): string {
-    const topThree = predictions.slice(0, 3);
-    const descriptions = topThree.map(p => {
-      const name = p.className.split(',')[0].replace(/_/g, ' ');
-      const confidence = Math.round(p.probability * 100);
-      return `${name} (${confidence}% confidence)`;
-    });
+    // Get the top prediction with highest confidence
+    const topPrediction = predictions[0];
+    const fullClassName = topPrediction.className;
     
-    return `AI detected: ${descriptions.join(', ')}. Please verify and adjust details as needed.`;
+    // Split by comma to get variations (e.g., "Granny Smith, apple" or "pepperoni pizza, pizza")
+    const variations = fullClassName.split(',').map((s: string) => s.trim());
+    
+    // Create a natural, menu-style description
+    let description = '';
+    
+    if (variations.length > 1) {
+      // If we have specific variety (e.g., "Granny Smith, apple")
+      const specific = variations[0].replace(/_/g, ' ');
+      const general = variations[1].replace(/_/g, ' ');
+      
+      // Capitalize properly
+      const specificCapitalized = specific.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+      
+      description = `${specificCapitalized}. `;
+      
+      // Add context from second prediction if relevant
+      if (predictions[1] && predictions[1].probability > 0.1) {
+        const secondItem = predictions[1].className.split(',')[0].replace(/_/g, ' ').toLowerCase();
+        description += `May also contain ${secondItem}. `;
+      }
+    } else {
+      // Single item description
+      const itemName = variations[0].replace(/_/g, ' ');
+      const itemCapitalized = itemName.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+      
+      description = `${itemCapitalized}. `;
+      
+      // Add variety from second prediction if it's related
+      if (predictions[1] && predictions[1].probability > 0.15) {
+        const secondItem = predictions[1].className.split(',')[0].replace(/_/g, ' ').toLowerCase();
+        // Only add if it seems like a variation (not completely different)
+        if (secondItem.includes(itemName.toLowerCase()) || itemName.toLowerCase().includes(secondItem)) {
+          description += `Variety may include ${secondItem}. `;
+        }
+      }
+    }
+    
+    // Add a generic closing
+    description += 'Fresh and ready for pickup.';
+    
+    return description;
   }
 
   // Helper method to create an image element from a file
