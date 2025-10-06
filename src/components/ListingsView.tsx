@@ -3,14 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Navigation, MapPin, Package, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+
 import type { FoodListing } from '@/types/listings';
 
-interface FoodMapViewProps {
+interface ListingsViewProps {
   listings: FoodListing[];
   onClaimClick: (listing: FoodListing) => void;
 }
 
-const FoodMapView = ({ listings, onClaimClick }: FoodMapViewProps) => {
+const ListingsView = ({ listings, onClaimClick }: ListingsViewProps) => {
   // Check if a listing is expired
   const isExpired = (availableUntil: string) => {
     return new Date(availableUntil) < new Date();
@@ -107,4 +108,4 @@ const FoodMapView = ({ listings, onClaimClick }: FoodMapViewProps) => {
   );
 };
 
-export default FoodMapView;
+export default ListingsView;

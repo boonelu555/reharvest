@@ -5,23 +5,11 @@ import { Leaf, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import ConsumerProfile from "./ConsumerProfile";
-import FoodMapView from "./FoodMapView";
+import ListingsView from "./ListingsView";
+import type { FoodListing } from "@/types/listings";
 import ClaimConfirmationDialog from "./ClaimConfirmationDialog";
 
-interface FoodListing {
-  id: string;
-  title: string;
-  description: string;
-  quantity: string;
-  category: string;
-  pickup_location: string;
-  available_until: string;
-  status: string;
-  latitude: number | null;
-  longitude: number | null;
-  provider_id: string;
-  image_url?: string;
-}
+// Using shared FoodListing type
 
 const ConsumerDashboard = () => {
   const navigate = useNavigate();
@@ -152,7 +140,7 @@ const ConsumerDashboard = () => {
             <p className="text-muted-foreground">Loading available food...</p>
           </div>
         ) : (
-          <FoodMapView listings={listings} onClaimClick={handleClaimFromMap} />
+          <ListingsView listings={listings} onClaimClick={handleClaimFromMap} />
         )}
       </div>
 

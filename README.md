@@ -1,73 +1,126 @@
-# Welcome to your Lovable project
+# reharvest
 
-## Project info
+## overview
 
-**URL**: https://lovable.dev/projects/83b6f5f2-9c72-4606-accf-57f84fe3a2c9
+reharvest connects surplus food from local businesses to nearby consumers. providers can create a listing in seconds by uploading a photo; our in‑browser ai fills in a clean title, category, and short menu‑style description. consumers browse nearby items, get directions with google maps, and claim food with live quantity updates. expired items are automatically disabled and greyed out.
 
-## How can I edit this code?
+## features
 
-There are several ways of editing your application.
+- provider flow
+  - upload a photo → ai auto‑fills title, category, and description (tensorflow.js mobilenet in the browser)
+  - set quantity, pickup location, and an "available until" time
+  - publish instantly
 
-**Use Lovable**
+- consumer flow
+  - see available listings in a clean card layout
+  - open directions in google maps via the navigate button
+  - claim items with a confirmation dialog
+  - quantity updates live; when it reaches 0, the listing disappears
+  - if time has passed, the card shows an "expired" badge and actions are disabled
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/83b6f5f2-9c72-4606-accf-57f84fe3a2c9) and start prompting.
+- reliability & security
+  - supabase for auth, database (postgres), and storage
+  - row level security (rls) to protect user data
+  - environment variables kept out of git (use .env)
 
-Changes made via Lovable will be committed automatically to this repo.
+## tech stack
 
-**Use your preferred IDE**
+- react + vite + typescript
+- tailwind css + shadcn‑ui components
+- supabase (auth, postgres, storage)
+- tensorflow.js (mobilenet) for client‑side image classification
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## getting started
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### prerequisites
 
-Follow these steps:
+- node 18+ and npm
+- a supabase project (url + anon/publishable key)
+- a google maps api key (for navigation links; embedded map optional)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### setup
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+git clone <your_repo_url>
+cd reharvest-van-connect
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# create a .env file in the project root
+cat > .env << 'EOF'
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_or_publishable_key
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+EOF
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# start the dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+open the local url printed in the terminal (usually http://localhost:8080 or 8081).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## using the app
 
-**Use GitHub Codespaces**
+### as a provider
+1. sign in / sign up as a provider.
+2. click "create listing".
+3. upload a food photo and press "auto‑fill with ai".
+   - the browser runs tensorflow.js mobilenet to classify the image and generate a menu‑style description (no percentages shown).
+4. set quantity, pickup location, and available‑until time.
+5. publish.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### as a consumer
+1. sign in as a consumer.
+2. browse the card list of available food near vancouver.
+3. click "navigate" to open directions in google maps.
+4. click "claim" → confirm in the dialog.
+   - the app creates a claim and decrements quantity live.
+   - when quantity reaches 0, the listing disappears.
+5. expired items are greyed out, show an "expired" badge, and cannot be claimed.
 
-## What technologies are used for this project?
+## scripts
 
-This project is built with:
+```bash
+npm run dev       # start local dev server
+npm run build     # production build
+npm run preview   # preview the production build locally
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## configuration
 
-## How can I deploy this project?
+set these environment variables in `.env`:
 
-Simply open [Lovable](https://lovable.dev/projects/83b6f5f2-9c72-4606-accf-57f84fe3a2c9) and click on Share -> Publish.
+- `vite_supabase_url` – your supabase project url
+- `vite_supabase_publishable_key` – your supabase anon/publishable key
+- `vite_google_maps_api_key` – your maps api key
 
-## Can I connect a custom domain to my Lovable project?
+## data model (simplified)
 
-Yes, you can!
+- `profiles` – user profiles (provider/consumer)
+- `food_listings` – title, description, category, quantity, pickup_location, available_until, image_url, status
+- `claims` – who claimed which listing and when
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## ai details
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- runs completely in the browser (tensorflow.js + mobilenet)
+- maps predictions to app categories and generates a short menu‑style description from the top class
+- avoids exposing confidence percentages for a cleaner ux
+
+## troubleshooting
+
+- authentication issues: ensure `vite_supabase_url` and `vite_supabase_publishable_key` are present and correct.
+- navigation: the "navigate" button opens google maps with the pickup location query.
+- expired items: if a card shows expired, the time has passed; actions are disabled by design.
+
+## roadmap
+
+- embedded map with geocoding + clustering and live user location
+- push/email notifications for new or expiring items
+- provider analytics (waste diverted, pickup rate)
+- reservation windows, qr/otp pickup verification, no‑show protection
+- in‑app messaging between providers and consumers
+- bulk uploads, recurring schedules, and inventory integrations
+- fine‑tuned food model and allergen/dietary tags
+
+## license
+
+mit

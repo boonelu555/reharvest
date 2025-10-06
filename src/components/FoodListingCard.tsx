@@ -8,18 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import ClaimConfirmationDialog from "./ClaimConfirmationDialog";
 
+import type { FoodListing } from "@/types/listings";
+
 interface FoodListingCardProps {
-  listing: {
-    id: string;
-    title: string;
-    description: string;
-    quantity: string;
-    category: string;
-    pickup_location: string;
-    available_until: string;
-    status: string;
-    image_url?: string;
-  };
+  listing: FoodListing;
   onUpdate: () => void;
   isProvider: boolean;
 }

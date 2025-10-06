@@ -8,19 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import CreateListingDialog from "./CreateListingDialog";
 import FoodListingCard from "./FoodListingCard";
 import ProviderProfile from "./ProviderProfile";
+import type { FoodListing } from "@/types/listings";
 
-interface FoodListing {
-  id: string;
-  title: string;
-  description: string;
-  quantity: string;
-  category: string;
-  pickup_location: string;
-  available_until: string;
-  status: string;
-  created_at: string;
-  image_url?: string;
-}
 
 const ProviderDashboard = () => {
   const navigate = useNavigate();
